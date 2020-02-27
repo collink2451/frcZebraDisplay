@@ -10,12 +10,14 @@ import java.awt.event.FocusListener;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JTextField;
-import javax.swing.*;
 import java.awt.image.BufferedImage;
 
 public class zebraDataDisplay {
   private static String[] matches = null;
   private static JPanel graphicsPanel = new JPanel();
+  private static ArrayList<JCheckBox> checkBoxList = new ArrayList<JCheckBox>();
+  private static ArrayList<JCheckBox> matchesCheckBox = new ArrayList<JCheckBox>();
+
   public static void main(String[] args) throws InterruptedException {
     System.out.println("Initializing...");
     System.out.println("");
@@ -316,16 +318,24 @@ public class zebraDataDisplay {
   }
 
   public static JPanel grabAndDraw(JTextField teamNumTextField, String eventKey, JFrame frame, JLayeredPane layeredPane,
-      String drawMode, ArrayList<String> arrayList) {
+      String drawMode, ArrayList<JCheckBox> arrayList) {
     String[] xPos, yPos;
+    ArrayList<String> matchesArrayList = new ArrayList<String>();
+    try {
+      for (int i = 0; i < arrayList.size(); i++) {
+        matchesArrayList.add(arrayList.get(i).getName());
+      }
+    } catch (NullPointerException npe) {
+      System.err.println(npe);
+    }
     if (teamNumTextField.getText().equals("Team #") == false) {
       int teamNum = Integer.parseInt(teamNumTextField.getText());
       matches = curlTeamData(teamNum, eventKey);
-      if (arrayList.isEmpty()) {
-        matches = curlTeamData(teamNum, eventKey);
-      }
-      else {
-        matches = arrayList.toArray(new String[0]);
+      if (matchesArrayList.isEmpty()) {
+        //matches = curlTeamData(teamNum, eventKey);
+      } else {
+        matches = matchesArrayList.toArray(new String[0]);
+        System.out.println(matchesArrayList);
       }
 
       String[] data = getMatches(matches);
@@ -368,6 +378,14 @@ public class zebraDataDisplay {
     JPanel checkBoxPanel = new JPanel();
     checkBoxPanel.setLayout(gridBoxLayout);
 
+    GridLayout gridBoxLayout2 = new GridLayout(2, 1);
+    JPanel checkBoxOptions = new JPanel();
+    checkBoxOptions.setLayout(gridBoxLayout2);
+
+    GridLayout gridBoxLayout3 = new GridLayout(1, 2);
+    JPanel checkBoxes = new JPanel();
+    checkBoxes.setLayout(gridBoxLayout3);
+
     JPanel container = new JPanel();
     container.setLayout(new FlowLayout(FlowLayout.LEADING));
 
@@ -400,14 +418,19 @@ public class zebraDataDisplay {
       }
     });
 
-    ArrayList<String> matchesCheckBox = new ArrayList<String>();
     grabMatches.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
         String command = e.getActionCommand();
         if (command.equals("Grab Matches")) {
+          JCheckBox addAllCheck = new JCheckBox("Select All");
+          JCheckBox removeAllCheck = new JCheckBox("Deselect All");
+          addAllCheck.setSelected(true);
           if (!teamNumTextField.getText().equals("Team #")) {
             try {
               checkBoxPanel.removeAll();
+              if (!(checkBoxList == null)) {
+                checkBoxList.clear();
+              }
               int teamNum = Integer.parseInt(teamNumTextField.getText());
               String[] data = curlTeamData(teamNum, eventKey);
               for (int i = 0; !data[i].contains("]"); i++) {
@@ -421,33 +444,77 @@ public class zebraDataDisplay {
                   JCheckBox checkBox = new JCheckBox((i) + ". " + matchID);
                   checkBox.setName(matchID);
                   checkBoxPanel.add(checkBox);
+                  checkBox.setSelected(true);
+                  matchesCheckBox.add(checkBox);
+                  try {
+                    checkBoxList.add(checkBox);
+                  } catch (NullPointerException npe) {
+                    System.err.println(npe);
+                  }
                   frame.pack();
                   checkBox.addActionListener(new ActionListener() {
                     public void actionPerformed(ActionEvent e) {
                       JCheckBox checkBox = (JCheckBox) e.getSource();
                       if (checkBox.isSelected()) {
                         try {
-                          matchesCheckBox.add(checkBox.getName());
                           System.out.println("Selected " + matchIDf);
+                          matchesCheckBox.add(checkBox);
+                          addAllCheck.setSelected(false);
+                          removeAllCheck.setSelected(false);
                         } catch (Exception ex) {
                           System.err.println(ex);
                         }
                       } else {
                         try {
                           System.out.println("Deselected " + matchIDf);
-                          matchesCheckBox.remove(checkBox.getName());
+                          matchesCheckBox.remove(checkBox);
+                          removeAllCheck.setSelected(false);
                         } catch (Exception ex) {
                           System.err.println(ex);
                         }
                       }
                     }
                   });
+
                 }
               }
             } catch (NumberFormatException ex) {
               System.err.println(ex);
             }
           }
+          addAllCheck.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+              JCheckBox addAllCheck = (JCheckBox) e.getSource();
+              if (addAllCheck.isSelected()) {
+                removeAllCheck.setSelected(false);
+                for (int i = 0; i < checkBoxList.size(); i++) {
+                  JCheckBox checkbox = checkBoxList.get(i);
+                  checkbox.setSelected(true);
+                }
+                matchesCheckBox = checkBoxList;
+              } else {
+                removeAllCheck.setSelected(true);
+              }
+            }
+          });
+          removeAllCheck.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+              JCheckBox removeAllCheck = (JCheckBox) e.getSource();
+              if (removeAllCheck.isSelected()) {
+                addAllCheck.setSelected(false);
+                for (int i = 0; i < checkBoxList.size(); i++) {
+                  JCheckBox checkbox = checkBoxList.get(i);
+                  checkbox.setSelected(false);
+                }
+                matchesCheckBox.clear();
+              } else {
+                addAllCheck.setSelected(true);
+              }
+            }
+          });
+          checkBoxOptions.add(addAllCheck);
+          checkBoxOptions.add(removeAllCheck);
+          frame.pack();
         }
       };
     });
@@ -487,7 +554,12 @@ public class zebraDataDisplay {
     layeredPane.add(graphicsPanel, 0);
     container.add(layeredPane, BorderLayout.WEST);
     container.add(panel, BorderLayout.EAST);
-    container.add(checkBoxPanel, BorderLayout.SOUTH);
+
+    checkBoxes.add(checkBoxPanel, BorderLayout.WEST);
+    checkBoxes.add(checkBoxOptions, BorderLayout.EAST);
+
+    container.add(checkBoxes, BorderLayout.SOUTH);
+
     frame.add(container);
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     frame.pack();
@@ -524,9 +596,6 @@ class DrawPosition extends JPanel {
   public void paintComponent(Graphics g) {
     super.paintComponent(g);
     g.clearRect(0, 0, 1180, 600);
-    //Int[] colorsR
-    //Int[] colorsG
-    //Int[] colorsB
     try {
       java.awt.Image img = ImageIO.read(new File("src/2019_field.png"));
       g.drawImage(img, 0, 0, null);
@@ -537,14 +606,17 @@ class DrawPosition extends JPanel {
     if (xPos == null) {
       return;
     }
-
-    g.setColor(new Color(0, 0, 0, 0));
     double scale = 21.4485049833887043;
     int alliance = 0; // 0 is null, 1 is blue, 2 is red
     int j = 0;
+    int colorIndex = -1;
+    int[] colorR = { 0, 255, 0, 255, 51, 204, 102, 51, 102, 102, 255, 255, 0, 0, 0, 255, 153, 102, 51, 0, 204 };
+    int[] colorG = { 0, 0, 0, 102, 204, 204, 102, 51, 51, 0, 255, 255, 102, 204, 0, 102, 0, 255, 153, 0, 0 };
+    int[] colorB = { 0, 0, 255, 0, 255, 204, 102, 51, 0, 153, 255, 0, 0, 0, 204, 102, 0, 102, 255, 0, 0 };
     int imageCenterX = 582;
     int imageCenterY = 289;
-    g.setColor(new Color(255, 0, 0, 8));
+    int transparency = 255;
+    int diameter = 5;
     for (int i = 0; i < xPos.length; i++) {
       if (isNumericDouble(xPos[i]) == false) {
         alliance = 0;
@@ -555,36 +627,42 @@ class DrawPosition extends JPanel {
         if (isNumericDouble(xPos[j]) == false) {
         } else if (((int) Math.round((Double.parseDouble(xPos[j])) * scale) - 5) > 581) {
           alliance = 1;
-
+          colorIndex++;
         } else if (((int) Math.round((Double.parseDouble(xPos[j])) * scale) - 5) < 581) {
           alliance = 2;
-        } else {
-
+          colorIndex++;
         }
-
       }
+      g.setColor(new Color(colorR[colorIndex], colorG[colorIndex], colorB[colorIndex], transparency));
       if (mode.equals("norm")) {
         try {
-          int x = (int) Math.round((Double.parseDouble(xPos[i])) * scale) - 12;
-          int y = 570 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
-          g.fillOval(x, y, 25, 25);
+          int xCenter = (int) Math.round((Double.parseDouble(xPos[i])) * scale);
+          int yCenter = 579 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
+          int x = xCenter - (diameter / 2);
+          int y = yCenter - (diameter / 2);
+          g.fillOval(x, y, diameter, diameter);
         } catch (NumberFormatException ex) {
           System.err.println(ex);
         }
       } else if (mode.equals("allRed")) {
         if (alliance == 1) {
           try {
-            int x = (-(((int) Math.round((Double.parseDouble(xPos[i])) * scale)) - imageCenterX) + imageCenterX);
-            int y = (-((570 - (int) Math.round((Double.parseDouble(yPos[i])) * scale)) - imageCenterY) + imageCenterY);
-            g.fillOval(x, y, 10, 10);
+            int xCenter = (-(((int) Math.round((Double.parseDouble(xPos[i])) * scale)) - imageCenterX) + imageCenterX);
+            int yCenter = (-((570 - (int) Math.round((Double.parseDouble(yPos[i])) * scale)) - imageCenterY)
+                + imageCenterY);
+            int x = xCenter - (diameter / 2);
+            int y = yCenter - (diameter / 2);
+            g.fillOval(x, y, diameter, diameter);
           } catch (NumberFormatException ex) {
             System.err.println(ex);
           }
         } else if (alliance == 2) {
           try {
-            int x = (int) Math.round((Double.parseDouble(xPos[i])) * scale);
-            int y = 570 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
-            g.fillOval(x, y, 10, 10);
+            int xCenter = (int) Math.round((Double.parseDouble(xPos[i])) * scale);
+            int yCenter = 570 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
+            int x = xCenter - (diameter / 2);
+            int y = yCenter - (diameter / 2);
+            g.fillOval(x, y, diameter, diameter);
           } catch (NumberFormatException ex) {
             System.err.println(ex);
           }
@@ -592,17 +670,22 @@ class DrawPosition extends JPanel {
       } else if (mode.equals("allBlue")) {
         if (alliance == 1) {
           try {
-            int x = (int) Math.round((Double.parseDouble(xPos[i])) * scale);
-            int y = 570 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
-            g.fillOval(x, y, 10, 10);
+            int xCenter = (int) Math.round((Double.parseDouble(xPos[i])) * scale);
+            int yCenter = 570 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
+            int x = xCenter - (diameter / 2);
+            int y = yCenter - (diameter / 2);
+            g.fillOval(x, y, diameter, diameter);
           } catch (NumberFormatException ex) {
             System.err.println(ex);
           }
         } else if (alliance == 2) {
           try {
-            int x = (-(((int) Math.round((Double.parseDouble(xPos[i])) * scale)) - imageCenterX) + imageCenterX);
-            int y = (-((570 - (int) Math.round((Double.parseDouble(yPos[i])) * scale)) - imageCenterY) + imageCenterY);
-            g.fillOval(x, y, 10, 10);
+            int xCenter = (-(((int) Math.round((Double.parseDouble(xPos[i])) * scale)) - imageCenterX) + imageCenterX);
+            int yCenter = (-((570 - (int) Math.round((Double.parseDouble(yPos[i])) * scale)) - imageCenterY)
+                + imageCenterY);
+            int x = xCenter - (diameter / 2);
+            int y = yCenter - (diameter / 2);
+            g.fillOval(x, y, diameter, diameter);
           } catch (NumberFormatException ex) {
             System.err.println(ex);
           }
@@ -610,9 +693,11 @@ class DrawPosition extends JPanel {
       } else if (mode.equals("blueMatches")) {
         if (alliance == 1) {
           try {
-            int x = (int) Math.round((Double.parseDouble(xPos[i])) * scale);
-            int y = 570 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
-            g.fillOval(x, y, 10, 10);
+            int xCenter = (int) Math.round((Double.parseDouble(xPos[i])) * scale);
+            int yCenter = 570 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
+            int x = xCenter - (diameter / 2);
+            int y = yCenter - (diameter / 2);
+            g.fillOval(x, y, diameter, diameter);
           } catch (NumberFormatException ex) {
             System.err.println(ex);
           }
@@ -620,9 +705,11 @@ class DrawPosition extends JPanel {
       } else if (mode.equals("redMatches")) {
         if (alliance == 2) {
           try {
-            int x = (int) Math.round((Double.parseDouble(xPos[i])) * scale);
-            int y = 570 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
-            g.fillOval(x, y, 10, 10);
+            int xCenter = (int) Math.round((Double.parseDouble(xPos[i])) * scale);
+            int yCenter = 570 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
+            int x = xCenter - (diameter / 2);
+            int y = yCenter - (diameter / 2);
+            g.fillOval(x, y, diameter, diameter);
           } catch (NumberFormatException ex) {
             System.err.println(ex);
           }
