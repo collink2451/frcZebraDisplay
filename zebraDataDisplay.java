@@ -15,11 +15,13 @@ public class zebraDataDisplay {
   private static JPanel checkBoxPanel;
   private static Properties configFile = new java.util.Properties();
   private static ArrayList<JCheckBox> checkBoxList = new ArrayList<JCheckBox>();
-  private static ArrayList<JCheckBox> matchesCheckBox = new ArrayList<JCheckBox>();
+  private static ArrayList<JCheckBox> checkBoxesSelected = new ArrayList<JCheckBox>();
   private static String eventKey = null;
   private static JCheckBox modeNorm = new JCheckBox("Normal");
   private static JCheckBox modeHM = new JCheckBox("Heat Map");
   private static JCheckBox modeMC = new JCheckBox("Multi Color");
+  private static JCheckBox modeAuto = new JCheckBox("Autonomous");
+  private static JCheckBox modeAlli = new JCheckBox("Alliance");
   private static JCheckBox drawNorm = new JCheckBox("Normal");
   private static JCheckBox drawAllBlue = new JCheckBox("All on Blue Alliance");
   private static JCheckBox drawAllRed = new JCheckBox("All on Red Alliance");
@@ -28,6 +30,8 @@ public class zebraDataDisplay {
   private static String drawMode, colorMode;
   private static String prevDrawMode = null;
   private static String prevColorMode = null;
+  private static boolean auto = false;
+  private static boolean alli = false;
 
   public static void main(String[] args) throws InterruptedException {
     System.out.println("Initializing...");
@@ -46,7 +50,7 @@ public class zebraDataDisplay {
     createFrame();
   }
 
-  public static String[] position(String[] data, int teamNum, String mode) {
+  public static ArrayList<String> position(String[] data, int teamNum, String mode) {
     ArrayList<Integer> teamIndex = new ArrayList<Integer>();
     int index = 1;
     int outputTeamNum;
@@ -76,7 +80,6 @@ public class zebraDataDisplay {
         }
       }
     }
-    String[] returnPos = null;
     ArrayList<String> posList = new ArrayList<String>();
     try {
       if (mode.equals("x")) {
@@ -147,8 +150,7 @@ public class zebraDataDisplay {
     } catch (IndexOutOfBoundsException ex) {
       System.err.println(ex);
     }
-    returnPos = posList.toArray(new String[0]);
-    return returnPos;
+    return posList;
   }
 
   public static void write(String filename, String[] data) throws IOException {
@@ -181,17 +183,6 @@ public class zebraDataDisplay {
   public static boolean isNumeric(String s) {
     try {
       Integer.parseInt(s);
-    } catch (NumberFormatException e) {
-      return false;
-    } catch (NullPointerException e) {
-      return false;
-    }
-    return true;
-  }
-
-  public static boolean isNumericDouble(String s) {
-    try {
-      Double.parseDouble(s);
     } catch (NumberFormatException e) {
       return false;
     } catch (NullPointerException e) {
@@ -349,7 +340,7 @@ public class zebraDataDisplay {
     return data;
   }
 
-  public static void saveImage(JPanel GraphicsPanel, String teamNum) {
+  public static void saveImage(JPanel GraphicsPanel, String teamNum, String teamNum2, String teamNum3) {
     BufferedImage output = new BufferedImage(GraphicsPanel.getWidth(), GraphicsPanel.getHeight(),
         BufferedImage.TYPE_INT_RGB);
 
@@ -380,54 +371,91 @@ public class zebraDataDisplay {
     } else if (prevColorMode.equals("multiColor")) {
       color = "Multicolor";
     }
+    
+    
+    if (!alli) {
+      String text = teamNum + " - " + eventKey + " - " + draw + " - " + color + "\n";
 
-    String text = teamNum + " - " + eventKey + " - " + draw + " - " + color + "\n";
+      String imageName = "images/" + teamNum + "-" + eventKey + "-" + prevDrawMode + "-" + prevColorMode;
+      String matchID;
+      for (int i = 1; i < matches.length; i++) {
+        if (matches[i].contains("]")) {
+          break;
+        }
+        matchID = (matches[i]).replace(eventKey, "");
+        matchID = matchID.replace(" ", "");
+        matchID = matchID.replace("\"", "");
+        matchID = matchID.replace(",", "");
+        imageName = imageName + matchID;
+        text = text + matchID.replace("_", "") + " ";
+        lineIndex++;
+        if (lineIndex % 6 == 0) {
+          text = text + "\n";
+        }
+      }
+      int x = 20;
+      int y = 600;
+      for (String line : text.split("\n")) {
+        g.drawString(line, x, y += g.getFontMetrics().getHeight());
+      }
+      imageName = imageName + ".png";
+      try {
+        File outputfile = new File(imageName);
+        ImageIO.write(output, "png", outputfile);
+      } catch (IOException ioe) {
+        ioe.printStackTrace();
+      }
+    } else {
+      String text = teamNum;
+      String imageName = "images/" + teamNum;
+      if (isNumeric(teamNum2)) {
+        text = text + " - " + teamNum2;
+        imageName = imageName + "-" + teamNum2;
+      }
+      if (isNumeric(teamNum3)) {
+        text = text + " - " + teamNum3;
+        imageName = imageName + "-" + teamNum3;
+      }
+      text = text + " - " + eventKey + " - " + draw + " - " + color + "\n";
+      imageName = imageName + "-" + eventKey + "-" + prevDrawMode + "-" + prevColorMode;
 
-    String imageName = "images/" + teamNum + "-" + eventKey + "-" + prevDrawMode + "-" + prevColorMode;
-    String matchID;
-    for (int i = 1; i < matches.length; i++) {
-      if (matches[i].contains("]")) {
-        break;
+      int x = 20;
+      int y = 600;
+      for (String line : text.split("\n")) {
+        g.drawString(line, x, y += g.getFontMetrics().getHeight());
       }
-      matchID = (matches[i]).replace(eventKey, "");
-      matchID = matchID.replace(" ", "");
-      matchID = matchID.replace("\"", "");
-      matchID = matchID.replace(",", "");
-      imageName = imageName + matchID;
-      text = text + matchID.replace("_", "") + " ";
-      lineIndex++;
-      if (lineIndex % 6 == 0) {
-        text = text + "\n";
+      imageName = imageName + ".png";
+      try {
+        File outputfile = new File(imageName);
+        ImageIO.write(output, "png", outputfile);
+      } catch (IOException ioe) {
+        ioe.printStackTrace();
       }
-    }
-    int x = 20;
-    int y = 600;
-    for (String line : text.split("\n")) {
-      g.drawString(line, x, y += g.getFontMetrics().getHeight());
-    }
-    imageName = imageName + ".png";
-    try {
-      File outputfile = new File(imageName);
-      ImageIO.write(output, "png", outputfile);
-    } catch (IOException ioe) {
-      ioe.printStackTrace();
     }
   }
 
-  public static JPanel grabAndDraw(JTextField teamNumTextField, String eventKey, JFrame frame, JLayeredPane layeredPane,
-      String drawMode, ArrayList<JCheckBox> arrayList, String colorMode, int dataPS) {
+  public static JPanel grabAndDraw(JTextField teamNumTextField1, JTextField teamNumTextField2,
+      JTextField teamNumTextField3, String eventKey, JFrame frame, JLayeredPane layeredPane, String drawMode,
+      ArrayList<JCheckBox> arrayList, String colorMode, int dataPS) {
+
+    ArrayList<String> xPosList, yPosList;
     String[] xPos, yPos;
+    int teamNum = 0;
     ArrayList<String> matchesArrayList = new ArrayList<String>();
-    try {
-      for (int i = 0; i < arrayList.size(); i++) {
-        matchesArrayList.add(arrayList.get(i).getName());
+    if (!alli) {
+      try {
+        for (int i = 0; i < arrayList.size(); i++) {
+          matchesArrayList.add(arrayList.get(i).getName());
+        }
+      } catch (NullPointerException npe) {
+        System.err.println(npe);
       }
-    } catch (NullPointerException npe) {
-      System.err.println(npe);
     }
-    if (teamNumTextField.getText().equals("Team #") == false) {
-      int teamNum = Integer.parseInt(teamNumTextField.getText());
+
+    if (teamNumTextField1.getText().equals("Team #") == false) {
+      teamNum = Integer.parseInt(teamNumTextField1.getText());
       matches = curlTeamData(teamNum, eventKey);
+      System.out.println(matches[1]);
       if (matchesArrayList.isEmpty()) {
         matches = curlTeamData(teamNum, eventKey);
       } else {
@@ -435,14 +463,53 @@ public class zebraDataDisplay {
       }
 
       String[] data = getMatches(matches);
-      xPos = position(data, teamNum, "x");
-      yPos = position(data, teamNum, "y");
+      xPosList = position(data, teamNum, "x");
+      yPosList = position(data, teamNum, "y");
     } else {
+      xPosList = null;
+      yPosList = null;
+    }
+    if (alli) {
+      if (teamNumTextField2.getText().equals("Team #2") == false) {
+        teamNum = Integer.parseInt(teamNumTextField2.getText());
+        matches = curlTeamData(teamNum, eventKey);
+        System.out.println(matches[0]);
+        if (matchesArrayList.isEmpty()) {
+          matches = curlTeamData(teamNum, eventKey);
+        } else {
+          matches = matchesArrayList.toArray(new String[0]);
+        }
+  
+        String[] data = getMatches(matches);
+        xPosList.addAll(position(data, teamNum, "x"));
+        yPosList.addAll(position(data, teamNum, "y"));
+      }
+      if (teamNumTextField3.getText().equals("Team #3") == false) {
+        teamNum = Integer.parseInt(teamNumTextField3.getText());
+        matches = curlTeamData(teamNum, eventKey);
+        System.out.println(matches[0]);
+        if (matchesArrayList.isEmpty()) {
+          matches = curlTeamData(teamNum, eventKey);
+        } else {
+          matches = matchesArrayList.toArray(new String[0]);
+        }
+  
+        String[] data = getMatches(matches);
+        xPosList.addAll(position(data, teamNum, "x"));
+        yPosList.addAll(position(data, teamNum, "y"));
+      }
+    }
+    try {
+      xPos = xPosList.toArray(new String[0]);
+      yPos = yPosList.toArray(new String[0]);
+    } catch (NullPointerException ex) {
       xPos = null;
       yPos = null;
+      System.err.println(ex);
     }
+
     JPanel graphicsPanel = new JPanel();
-    graphicsPanel = new DrawPosition(xPos, yPos, frame, drawMode, colorMode, dataPS, matches, checkBoxPanel);
+    graphicsPanel = new DrawPosition(xPos, yPos, frame, drawMode, colorMode, matches, checkBoxPanel, auto);
     prevDrawMode = drawMode;
     prevColorMode = colorMode;
     graphicsPanel.setSize(1200, 800);
@@ -470,10 +537,18 @@ public class zebraDataDisplay {
     frame.setPreferredSize(new Dimension(1920, 1080));
 
     JLayeredPane layeredPane = new JLayeredPane();
-    layeredPane.setPreferredSize(new Dimension(1180, 595));
+    layeredPane.setPreferredSize(new Dimension(1200, 600));
 
+	GridLayout gridBoxLayout7 = new GridLayout(3, 1, 0, 0);
+	JPanel sideBarHeader = new JPanel();
+	sideBarHeader.setLayout(gridBoxLayout7);
+	
     JPanel panel = new JPanel();
     panel.setFocusable(true);
+
+    GridLayout gridBoxLayout6 = new GridLayout(1, 3);
+    JPanel teamInputPanel = new JPanel();
+    teamInputPanel.setLayout(gridBoxLayout6);
 
     GridLayout gridBoxLayout = new GridLayout(0, 5);
     checkBoxPanel = new JPanel();
@@ -487,12 +562,11 @@ public class zebraDataDisplay {
     JPanel checkBoxes = new JPanel();
     checkBoxes.setLayout(gridBoxLayout3);
 
-    GridLayout gridBoxLayout4 = new GridLayout(4, 1, 0, 10);
+    GridLayout gridBoxLayout4 = new GridLayout(6, 1);
     JPanel modeSelection = new JPanel();
     modeSelection.setLayout(gridBoxLayout4);
-    modeSelection.setMaximumSize(new Dimension(100, 10));
-    
-    GridLayout gridBoxLayout5 = new GridLayout(7, 1, 0, 10);
+
+    GridLayout gridBoxLayout5 = new GridLayout(7, 1);
     JPanel modeOptions = new JPanel();
     modeOptions.setLayout(gridBoxLayout5);
 
@@ -503,7 +577,7 @@ public class zebraDataDisplay {
     JPanel container = new JPanel();
     container.setLayout(new FlowLayout(FlowLayout.LEADING));
 
-    panel.setLayout(new GridLayout(6, 1));
+    panel.setLayout(new GridLayout(7, 1));
     GridBagConstraints gbc = new GridBagConstraints();
     gbc.anchor = GridBagConstraints.NORTH;
     gbc.weighty = 2;
@@ -529,6 +603,30 @@ public class zebraDataDisplay {
       @Override
       public void focusGained(java.awt.event.FocusEvent e) {
         teamNumTextField.setText("");
+      }
+
+      @Override
+      public void focusLost(java.awt.event.FocusEvent e) {
+      }
+    });
+    JTextField teamNumTextField2 = new JTextField(6);
+    teamNumTextField2.setText("Team #2");
+    teamNumTextField2.addFocusListener(new FocusListener() {
+      @Override
+      public void focusGained(java.awt.event.FocusEvent e) {
+        teamNumTextField2.setText("");
+      }
+
+      @Override
+      public void focusLost(java.awt.event.FocusEvent e) {
+      }
+    });
+    JTextField teamNumTextField3 = new JTextField(6);
+    teamNumTextField3.setText("Team #3");
+    teamNumTextField3.addFocusListener(new FocusListener() {
+      @Override
+      public void focusGained(java.awt.event.FocusEvent e) {
+        teamNumTextField3.setText("");
       }
 
       @Override
@@ -565,11 +663,11 @@ public class zebraDataDisplay {
     drawRedOnly.setSize(100, 10);
 
     modeOptions.add(optionHead, BorderLayout.NORTH);
-    modeOptions.add(drawNorm, BorderLayout.EAST);
-    modeOptions.add(drawAllBlue, BorderLayout.EAST);
-    modeOptions.add(drawAllRed, BorderLayout.EAST);
-    modeOptions.add(drawBlueOnly, BorderLayout.EAST);
-    modeOptions.add(drawRedOnly, BorderLayout.EAST);
+    modeOptions.add(drawNorm, BorderLayout.WEST);
+    modeOptions.add(drawAllBlue, BorderLayout.WEST);
+    modeOptions.add(drawAllRed, BorderLayout.WEST);
+    modeOptions.add(drawBlueOnly, BorderLayout.WEST);
+    modeOptions.add(drawRedOnly, BorderLayout.WEST);
     drawNorm.setSelected(true);
 
     drawNorm.addActionListener(new ActionListener() {
@@ -639,11 +737,20 @@ public class zebraDataDisplay {
     });
 
     JLabel modeHead = new JLabel("Mode Selection");
+    modeHead.setSize(100, 10);
+    modeNorm.setSize(100, 10);
+    modeHM.setSize(100, 10);
+    modeMC.setSize(100, 10);
+    modeAuto.setSize(100, 10);
+    modeAlli.setSize(100, 10);
 
-    modeSelection.add(modeHead);
-    modeSelection.add(modeNorm);
-    modeSelection.add(modeHM);
-    modeSelection.add(modeMC);
+    modeSelection.add(modeHead, BorderLayout.NORTH);
+    modeSelection.add(modeNorm, BorderLayout.WEST);
+    modeSelection.add(modeHM, BorderLayout.WEST);
+    modeSelection.add(modeMC, BorderLayout.WEST);
+    modeSelection.add(modeAuto, BorderLayout.WEST);
+    modeSelection.add(modeAlli, BorderLayout.WEST);
+
     modeNorm.setSelected(true);
     modeNorm.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
@@ -678,6 +785,32 @@ public class zebraDataDisplay {
         }
       }
     });
+    modeAuto.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        if (modeAuto.isSelected()) {
+          auto = true;
+        } else {
+          modeAuto.setSelected(false);
+          auto = false;
+        }
+      }
+    });
+    modeAlli.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        if (modeAlli.isSelected()) {
+          alli = true;
+          teamInputPanel.add(teamNumTextField2);
+          teamInputPanel.add(teamNumTextField3);
+          frame.pack();
+        } else {
+          modeAlli.setSelected(false);
+          alli = false;
+          teamInputPanel.remove(teamNumTextField2);
+          teamInputPanel.remove(teamNumTextField3);
+          frame.pack();
+        }
+      }
+    });
 
     grabMatches.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
@@ -689,9 +822,7 @@ public class zebraDataDisplay {
           if (!teamNumTextField.getText().equals("Team #")) {
             try {
               checkBoxPanel.removeAll();
-              if (!(checkBoxList == null)) {
-                checkBoxList.clear();
-              }
+
               int teamNum = Integer.parseInt(teamNumTextField.getText());
               String[] data = curlTeamData(teamNum, eventKey);
               try {
@@ -707,7 +838,7 @@ public class zebraDataDisplay {
                     checkBox.setName(matchID);
                     checkBoxPanel.add(checkBox);
                     checkBox.setSelected(true);
-                    matchesCheckBox.add(checkBox);
+                    checkBoxesSelected.add(checkBox);
                     try {
                       checkBoxList.add(checkBox);
                     } catch (NullPointerException npe) {
@@ -720,7 +851,7 @@ public class zebraDataDisplay {
                         if (checkBox.isSelected()) {
                           try {
                             System.out.println("Selected " + matchIDf);
-                            matchesCheckBox.add(checkBox);
+                            checkBoxesSelected.add(checkBox);
                             addAllCheck.setSelected(false);
                             removeAllCheck.setSelected(false);
                           } catch (Exception ex) {
@@ -729,7 +860,7 @@ public class zebraDataDisplay {
                         } else {
                           try {
                             System.out.println("Deselected " + matchIDf);
-                            matchesCheckBox.remove(checkBox);
+                            checkBoxesSelected.remove(checkBox);
                             removeAllCheck.setSelected(false);
                           } catch (Exception ex) {
                             System.err.println(ex);
@@ -737,7 +868,6 @@ public class zebraDataDisplay {
                         }
                       }
                     });
-
                   }
                 }
               } catch (ArrayIndexOutOfBoundsException aiobe) {
@@ -752,18 +882,20 @@ public class zebraDataDisplay {
               JCheckBox addAllCheck = (JCheckBox) e.getSource();
               if (addAllCheck.isSelected()) {
                 removeAllCheck.setSelected(false);
-                for (int i = 0; i < checkBoxList.size(); i++) {
-                  JCheckBox checkbox = checkBoxList.get(i);
+                checkBoxesSelected.clear();
+                System.out.println(checkBoxList.size());
+                for (int j = 0; j < checkBoxList.size(); j++) {
+                  JCheckBox checkbox = checkBoxList.get(j);
                   checkbox.setSelected(true);
                 }
-                matchesCheckBox = checkBoxList;
-              } else {
+                checkBoxesSelected.addAll(checkBoxList);
+              } else if (!addAllCheck.isSelected()) {
                 removeAllCheck.setSelected(true);
-                for (int i = 0; i < checkBoxList.size(); i++) {
-                  JCheckBox checkbox = checkBoxList.get(i);
+                for (int j = 0; j < checkBoxList.size(); j++) {
+                  JCheckBox checkbox = checkBoxList.get(j);
                   checkbox.setSelected(false);
                 }
-                matchesCheckBox.clear();
+                checkBoxesSelected.clear();
               }
             }
           });
@@ -772,14 +904,19 @@ public class zebraDataDisplay {
               JCheckBox removeAllCheck = (JCheckBox) e.getSource();
               if (removeAllCheck.isSelected()) {
                 addAllCheck.setSelected(false);
-                for (int i = 0; i < checkBoxList.size(); i++) {
-                  JCheckBox checkbox = checkBoxList.get(i);
+                for (int j = 0; j < checkBoxList.size(); j++) {
+                  JCheckBox checkbox = checkBoxList.get(j);
                   checkbox.setSelected(false);
                 }
-                matchesCheckBox.clear();
-              } else {
+                checkBoxesSelected.clear();
+              } else if (!removeAllCheck.isSelected()) {
                 addAllCheck.setSelected(true);
-                matchesCheckBox = checkBoxList;
+                checkBoxesSelected.clear();
+                for (int j = 0; j < checkBoxList.size(); j++) {
+                  JCheckBox checkbox = checkBoxList.get(j);
+                  checkbox.setSelected(true);
+                }
+                checkBoxesSelected.addAll(checkBoxList);
               }
             }
           });
@@ -791,7 +928,7 @@ public class zebraDataDisplay {
       };
     });
 
-    graphicsPanel = grabAndDraw(teamNumTextField, eventKey, frame, layeredPane, "null", null, "norm", 0);
+    graphicsPanel = grabAndDraw(teamNumTextField, teamNumTextField2, teamNumTextField3, eventKey, frame, layeredPane, "null", null, "norm", 0);
 
     draw.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
@@ -799,7 +936,7 @@ public class zebraDataDisplay {
         if (command.equals("Draw")) {
           try {
             eventKey = competitionIDField.getText();
-            graphicsPanel = grabAndDraw(teamNumTextField, eventKey, frame, layeredPane, drawMode, matchesCheckBox,
+            graphicsPanel = grabAndDraw(teamNumTextField, teamNumTextField2, teamNumTextField3, eventKey, frame, layeredPane, drawMode, checkBoxesSelected,
                 colorMode, dataPS);
           } catch (Exception ex) {
             System.err.println(ex);
@@ -812,16 +949,28 @@ public class zebraDataDisplay {
       public void actionPerformed(ActionEvent e) {
         String command = e.getActionCommand();
         if (command.equals("Download")) {
-          saveImage(graphicsPanel, teamNumTextField.getText());
+          saveImage(graphicsPanel, teamNumTextField.getText(), teamNumTextField2.getText(), teamNumTextField3.getText());
         }
       }
     });
 
+	JLabel sideBarHeaderText = new JLabel("<html>FRC Zebra Data Display V1.0.0<br>Developed for PWNAGE FRC2451<br>\u00a9 Collin Koldoff 2020</html>");
+	
+	sideBarHeaderText.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+	
+	sideBarHeaderText.setSize(100, 20);
+	
+	sideBarHeader.add(sideBarHeaderText);
+	sideBarHeader.setPreferredSize(sideBarHeaderText.getPreferredSize());
+	
     draw.setBounds(0, 25, 100, 40);
     draw.setAlignmentX(Component.LEFT_ALIGNMENT);
     draw.setAlignmentY(Component.BOTTOM_ALIGNMENT);
 
-    panel.add(teamNumTextField);
+    teamInputPanel.add(teamNumTextField);
+	
+	panel.add(sideBarHeader);
+    panel.add(teamInputPanel);
     panel.add(competitionIDField);
     panel.add(draw);
     panel.add(save);
@@ -853,18 +1002,19 @@ class DrawPosition extends JPanel {
   private static final long serialVersionUID = 1L;
   private String[] xPos, yPos, matches;
   private String mode, colorMode;
-  private int dataPS;
   private JPanel checkBoxesPanel;
+  private boolean auto;
+  private int maxData = 1600;
 
-  public DrawPosition(String[] xPos, String[] yPos, JFrame frame, String mode, String colorMode, int dataPS,
-      String[] matches, JPanel checkBoxesPanel) {
+  public DrawPosition(String[] xPos, String[] yPos, JFrame frame, String mode, String colorMode, String[] matches,
+      JPanel checkBoxesPanel, boolean auto) {
     this.xPos = xPos;
     this.yPos = yPos;
     this.mode = mode;
     this.colorMode = colorMode;
-    this.dataPS = dataPS;
     this.matches = matches;
     this.checkBoxesPanel = checkBoxesPanel;
+    this.auto = auto;
     this.removeAll();
   }
 
@@ -881,18 +1031,22 @@ class DrawPosition extends JPanel {
 
   public void paintComponent(Graphics g) {
     super.paintComponent(g);
-    g.clearRect(0, 0, 1180, 600);
+    g.clearRect(0, 0, 1200, 600);
     try {
-      java.awt.Image img = ImageIO.read(new File("src/2019_field.png"));
+      java.awt.Image img = ImageIO.read(new File("src/202_field.png"));
       g.drawImage(img, 0, 0, null);
     } catch (IOException ex) {
       System.err.println(ex);
     }
 
+    if (auto) {
+      maxData = 150;
+    }
+
     if (xPos == null) {
       return;
     }
-    double scale = 21.4485049833887043;
+    double scale = 22.5;
     int alliance = 0; // 0 is null, 1 is blue, 2 is red
     int j = 0;
     int colorIndex = -1;
@@ -907,30 +1061,31 @@ class DrawPosition extends JPanel {
     int[] colorR = { 0, 255, 0, 255, 51, 204, 102, 51, 102, 102, 255, 255, 0, 0, 0, 255, 153, 102, 51, 0, 204 };
     int[] colorG = { 0, 0, 0, 102, 204, 204, 102, 51, 51, 0, 255, 255, 102, 204, 0, 102, 0, 255, 153, 0, 0 };
     int[] colorB = { 0, 0, 255, 0, 255, 204, 102, 51, 0, 153, 255, 0, 0, 0, 204, 102, 0, 102, 255, 0, 0 };
-    String[] fgColor = { "WHITE", "WHITE", "WHITE", "BLACK", "BLACK", "WHITE", "WHITE", "WHITE",
-        "WHITE", "BLACK", "BLACK", "WHITE", "BLACK", "WHITE", "BLACK", "WHITE", "BLACK", "BLACK", "WHITE", "WHITE" };
+    String[] fgColor = { "WHITE", "WHITE", "WHITE", "BLACK", "BLACK", "WHITE", "WHITE", "WHITE", "WHITE", "BLACK",
+        "BLACK", "WHITE", "BLACK", "WHITE", "BLACK", "WHITE", "BLACK", "BLACK", "WHITE", "WHITE" };
 
-    int imageCenterX = 582;
-    int imageCenterY = 289;
+    int imageCenterX = 700;
+    int imageCenterY = 350;
     int transparency = 4;
     int diameter = 1;
     for (int i = 0; i < xPos.length; i++) {
       if (isNumericDouble(xPos[i]) == false) {
+        index = 0;
         alliance = 0;
         if (i < xPos.length - 1) {
           j = i + 1;
         }
         if (isNumericDouble(xPos[j]) == false) {
-        } else if (((int) Math.round((Double.parseDouble(xPos[j])) * scale) - 5) > 581) {
-          alliance = 1;
-          colorIndex++;
-        } else if (((int) Math.round((Double.parseDouble(xPos[j])) * scale) - 5) < 581) {
+        } else if (((int) Math.round((Double.parseDouble(xPos[j])) * scale) - 5) > imageCenterX) {
           alliance = 2;
+          colorIndex++;
+        } else if (((int) Math.round((Double.parseDouble(xPos[j])) * scale) - 5) < imageCenterY) {
+          alliance = 1;
           colorIndex++;
         }
       } else {
         index++;
-        if (index % dataPS == 0) {
+        if (index <= maxData) {
           if (colorMode.equals("multiColor")) {
             g.setColor(new Color(colorR[colorIndex], colorG[colorIndex], colorB[colorIndex]));
             try {
@@ -947,7 +1102,7 @@ class DrawPosition extends JPanel {
                 }
               }
             } catch (ArrayIndexOutOfBoundsException ex) {
-              // System.err.println(ex);
+              System.err.println(ex);
             }
             diameter = 5;
           } else if (colorMode.equals("norm")) {
@@ -965,7 +1120,7 @@ class DrawPosition extends JPanel {
           if (mode.equals("norm")) {
             try {
               int xCenter = (int) Math.round((Double.parseDouble(xPos[i])) * scale);
-              int yCenter = 579 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
+              int yCenter = 600 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
               int x = xCenter - (diameter / 2);
               int y = yCenter - (diameter / 2);
               g.fillOval(x, y, diameter, diameter);
@@ -976,8 +1131,8 @@ class DrawPosition extends JPanel {
             if (alliance == 1) {
               try {
                 int xCenter = (-(((int) Math.round((Double.parseDouble(xPos[i])) * scale)) - imageCenterX)
-                    + imageCenterX);
-                int yCenter = (-((570 - (int) Math.round((Double.parseDouble(yPos[i])) * scale)) - imageCenterY)
+                    + imageCenterX) - 201;
+                int yCenter = (-((698 - (int) Math.round((Double.parseDouble(yPos[i])) * scale)) - imageCenterY)
                     + imageCenterY);
                 int x = xCenter - (diameter / 2);
                 int y = yCenter - (diameter / 2);
@@ -988,7 +1143,7 @@ class DrawPosition extends JPanel {
             } else if (alliance == 2) {
               try {
                 int xCenter = (int) Math.round((Double.parseDouble(xPos[i])) * scale);
-                int yCenter = 570 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
+                int yCenter = 700 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
                 int x = xCenter - (diameter / 2);
                 int y = yCenter - (diameter / 2);
                 g.fillOval(x, y, diameter, diameter);
@@ -1000,7 +1155,7 @@ class DrawPosition extends JPanel {
             if (alliance == 1) {
               try {
                 int xCenter = (int) Math.round((Double.parseDouble(xPos[i])) * scale);
-                int yCenter = 570 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
+                int yCenter = 700 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
                 int x = xCenter - (diameter / 2);
                 int y = yCenter - (diameter / 2);
                 g.fillOval(x, y, diameter, diameter);
@@ -1010,8 +1165,8 @@ class DrawPosition extends JPanel {
             } else if (alliance == 2) {
               try {
                 int xCenter = (-(((int) Math.round((Double.parseDouble(xPos[i])) * scale)) - imageCenterX)
-                    + imageCenterX);
-                int yCenter = (-((570 - (int) Math.round((Double.parseDouble(yPos[i])) * scale)) - imageCenterY)
+                    + imageCenterX) - 201;
+                int yCenter = (-((698 - (int) Math.round((Double.parseDouble(yPos[i])) * scale)) - imageCenterY)
                     + imageCenterY);
                 int x = xCenter - (diameter / 2);
                 int y = yCenter - (diameter / 2);
@@ -1024,7 +1179,7 @@ class DrawPosition extends JPanel {
             if (alliance == 1) {
               try {
                 int xCenter = (int) Math.round((Double.parseDouble(xPos[i])) * scale);
-                int yCenter = 570 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
+                int yCenter = 700 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
                 int x = xCenter - (diameter / 2);
                 int y = yCenter - (diameter / 2);
                 g.fillOval(x, y, diameter, diameter);
@@ -1036,7 +1191,7 @@ class DrawPosition extends JPanel {
             if (alliance == 2) {
               try {
                 int xCenter = (int) Math.round((Double.parseDouble(xPos[i])) * scale);
-                int yCenter = 570 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
+                int yCenter = 700 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
                 int x = xCenter - (diameter / 2);
                 int y = yCenter - (diameter / 2);
                 g.fillOval(x, y, diameter, diameter);

@@ -1,0 +1,19 @@
+[
+  "2020orore_qf4m1", 
+  "2020orore_qf4m2", 
+  "2020orore_qm10", 
+  "2020orore_qm15", 
+  "2020orore_qm22", 
+  "2020orore_qm28", 
+  "2020orore_qm34", 
+  "2020orore_qm38", 
+  "2020orore_qm48", 
+  "2020orore_qm5", 
+  "2020orore_qm53", 
+  "2020orore_qm56", 
+  "2020orore_qm62", 
+  "2020orore_qm70", 
+  "2020orore_sf2m1", 
+  "2020orore_sf2m2", 
+  "2020orore_sf2m3"
+]
