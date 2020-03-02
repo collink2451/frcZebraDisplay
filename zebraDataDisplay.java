@@ -6,10 +6,13 @@ import java.util.stream.Collectors;
 import java.util.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ComponentEvent;
+import java.awt.event.ComponentListener;
 import java.awt.event.FocusListener;
 import java.awt.image.BufferedImage;
 
 public class zebraDataDisplay {
+  private static String version = "V1.0.0";
   private static String[] matches = null;
   private static JPanel graphicsPanel = new JPanel();
   private static JPanel checkBoxPanel;
@@ -347,6 +350,14 @@ public class zebraDataDisplay {
     Graphics g = output.createGraphics();
     GraphicsPanel.paint(g);
 
+    if (new File("images/").exists() == false) {
+      if (new File("images/").mkdir()) {
+        System.out.println("Directory is created");
+      } else {
+        System.out.println("Directory cannot be created");
+      }
+    }
+
     g.setColor(Color.WHITE);
     g.setFont(new Font("Arial Black", Font.PLAIN, 20));
 
@@ -371,8 +382,7 @@ public class zebraDataDisplay {
     } else if (prevColorMode.equals("multiColor")) {
       color = "Multicolor";
     }
-    
-    
+
     if (!alli) {
       String text = teamNum + " - " + eventKey + " - " + draw + " - " + color + "\n";
 
@@ -455,7 +465,6 @@ public class zebraDataDisplay {
     if (teamNumTextField1.getText().equals("Team #") == false) {
       teamNum = Integer.parseInt(teamNumTextField1.getText());
       matches = curlTeamData(teamNum, eventKey);
-      System.out.println(matches[1]);
       if (matchesArrayList.isEmpty()) {
         matches = curlTeamData(teamNum, eventKey);
       } else {
@@ -473,13 +482,12 @@ public class zebraDataDisplay {
       if (teamNumTextField2.getText().equals("Team #2") == false) {
         teamNum = Integer.parseInt(teamNumTextField2.getText());
         matches = curlTeamData(teamNum, eventKey);
-        System.out.println(matches[0]);
         if (matchesArrayList.isEmpty()) {
           matches = curlTeamData(teamNum, eventKey);
         } else {
           matches = matchesArrayList.toArray(new String[0]);
         }
-  
+
         String[] data = getMatches(matches);
         xPosList.addAll(position(data, teamNum, "x"));
         yPosList.addAll(position(data, teamNum, "y"));
@@ -487,13 +495,12 @@ public class zebraDataDisplay {
       if (teamNumTextField3.getText().equals("Team #3") == false) {
         teamNum = Integer.parseInt(teamNumTextField3.getText());
         matches = curlTeamData(teamNum, eventKey);
-        System.out.println(matches[0]);
         if (matchesArrayList.isEmpty()) {
           matches = curlTeamData(teamNum, eventKey);
         } else {
           matches = matchesArrayList.toArray(new String[0]);
         }
-  
+
         String[] data = getMatches(matches);
         xPosList.addAll(position(data, teamNum, "x"));
         yPosList.addAll(position(data, teamNum, "y"));
@@ -534,15 +541,11 @@ public class zebraDataDisplay {
 
     JFrame frame = new JFrame("FRC Zebra Display");
 
-    frame.setPreferredSize(new Dimension(1920, 1080));
+    // frame.setPreferredSize(new Dimension(1900, 1000));
 
     JLayeredPane layeredPane = new JLayeredPane();
     layeredPane.setPreferredSize(new Dimension(1200, 600));
 
-	GridLayout gridBoxLayout7 = new GridLayout(3, 1, 0, 0);
-	JPanel sideBarHeader = new JPanel();
-	sideBarHeader.setLayout(gridBoxLayout7);
-	
     JPanel panel = new JPanel();
     panel.setFocusable(true);
 
@@ -566,7 +569,7 @@ public class zebraDataDisplay {
     JPanel modeSelection = new JPanel();
     modeSelection.setLayout(gridBoxLayout4);
 
-    GridLayout gridBoxLayout5 = new GridLayout(7, 1);
+    GridLayout gridBoxLayout5 = new GridLayout(6, 1);
     JPanel modeOptions = new JPanel();
     modeOptions.setLayout(gridBoxLayout5);
 
@@ -582,6 +585,13 @@ public class zebraDataDisplay {
     gbc.anchor = GridBagConstraints.NORTH;
     gbc.weighty = 2;
 
+    JLabel api = new JLabel("Powered By The Blue Alliance");
+    JLabel teamNumLabel = new JLabel("Team Numbers");
+    JLabel eventKeyLabel = new JLabel("Event Key");
+    JLabel info1 = new JLabel("FRC Zebra Data Display " + version);
+    JLabel info2 = new JLabel("Developed for PWNAGE FRC2451");
+    JLabel info3 = new JLabel("© Collin Koldoff 2020");
+
     panel.setAlignmentX(Component.LEFT_ALIGNMENT);
     panel.setAlignmentY(Component.TOP_ALIGNMENT);
 
@@ -591,6 +601,8 @@ public class zebraDataDisplay {
     } catch (IOException ex) {
       System.err.println(ex);
     }
+
+    frame.setPreferredSize(new Dimension(1920, 1080));
 
     JButton draw = new JButton("Draw");
     frame.getRootPane().setDefaultButton(draw);
@@ -801,6 +813,8 @@ public class zebraDataDisplay {
           alli = true;
           teamInputPanel.add(teamNumTextField2);
           teamInputPanel.add(teamNumTextField3);
+          checkBoxes.remove(checkBoxPanel);
+          checkBoxes.remove(checkBoxOptions);
           frame.pack();
         } else {
           modeAlli.setSelected(false);
@@ -923,12 +937,19 @@ public class zebraDataDisplay {
           addAllCheck.setSelected(true);
           checkBoxOptions.add(addAllCheck);
           checkBoxOptions.add(removeAllCheck);
+          alli = false;
+          teamInputPanel.remove(teamNumTextField2);
+          teamInputPanel.remove(teamNumTextField3);
+          checkBoxes.add(checkBoxPanel, BorderLayout.WEST);
+          checkBoxes.add(checkBoxOptions, BorderLayout.EAST);
+          modeAlli.setSelected(false);
           frame.pack();
         }
       };
     });
 
-    graphicsPanel = grabAndDraw(teamNumTextField, teamNumTextField2, teamNumTextField3, eventKey, frame, layeredPane, "null", null, "norm", 0);
+    graphicsPanel = grabAndDraw(teamNumTextField, teamNumTextField2, teamNumTextField3, eventKey, frame, layeredPane,
+        "null", null, "norm", 0);
 
     draw.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
@@ -936,8 +957,8 @@ public class zebraDataDisplay {
         if (command.equals("Draw")) {
           try {
             eventKey = competitionIDField.getText();
-            graphicsPanel = grabAndDraw(teamNumTextField, teamNumTextField2, teamNumTextField3, eventKey, frame, layeredPane, drawMode, checkBoxesSelected,
-                colorMode, dataPS);
+            graphicsPanel = grabAndDraw(teamNumTextField, teamNumTextField2, teamNumTextField3, eventKey, frame,
+                layeredPane, drawMode, checkBoxesSelected, colorMode, dataPS);
           } catch (Exception ex) {
             System.err.println(ex);
           }
@@ -949,28 +970,48 @@ public class zebraDataDisplay {
       public void actionPerformed(ActionEvent e) {
         String command = e.getActionCommand();
         if (command.equals("Download")) {
-          saveImage(graphicsPanel, teamNumTextField.getText(), teamNumTextField2.getText(), teamNumTextField3.getText());
+          saveImage(graphicsPanel, teamNumTextField.getText(), teamNumTextField2.getText(),
+              teamNumTextField3.getText());
         }
       }
     });
 
-	JLabel sideBarHeaderText = new JLabel("<html>FRC Zebra Data Display V1.0.0<br>Developed for PWNAGE FRC2451<br>\u00a9 Collin Koldoff 2020</html>");
-	
-	sideBarHeaderText.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-	
-	sideBarHeaderText.setSize(100, 20);
-	
-	sideBarHeader.add(sideBarHeaderText);
-	sideBarHeader.setPreferredSize(sideBarHeaderText.getPreferredSize());
-	
+    ComponentListener componenetListener = new ComponentListener() {
+      @Override
+      public void componentResized(ComponentEvent event) {
+        frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
+      }
+
+      @Override
+      public void componentMoved(ComponentEvent e) {
+      }
+
+      @Override
+      public void componentShown(ComponentEvent e) {
+      }
+
+      @Override
+      public void componentHidden(ComponentEvent e) {
+      }
+    };
+
+    frame.addComponentListener(componenetListener);
+
     draw.setBounds(0, 25, 100, 40);
     draw.setAlignmentX(Component.LEFT_ALIGNMENT);
     draw.setAlignmentY(Component.BOTTOM_ALIGNMENT);
 
     teamInputPanel.add(teamNumTextField);
-	
-	panel.add(sideBarHeader);
+
+    JPanel info = new JPanel();
+    info.add(info1);
+    info.add(info2);
+    info.add(info3);
+    info.add(api);
+
+    panel.add(teamNumLabel);
     panel.add(teamInputPanel);
+    panel.add(eventKeyLabel);
     panel.add(competitionIDField);
     panel.add(draw);
     panel.add(save);
@@ -990,7 +1031,10 @@ public class zebraDataDisplay {
     container.add(checkBoxes, BorderLayout.SOUTH);
 
     frame.add(container);
+    frame.add(info, BorderLayout.PAGE_END);
+
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
     frame.pack();
     frame.setVisible(true);
 
@@ -1033,7 +1077,7 @@ class DrawPosition extends JPanel {
     super.paintComponent(g);
     g.clearRect(0, 0, 1200, 600);
     try {
-      java.awt.Image img = ImageIO.read(new File("src/202_field.png"));
+      java.awt.Image img = ImageIO.read(new File("src/2020_field.png"));
       g.drawImage(img, 0, 0, null);
     } catch (IOException ex) {
       System.err.println(ex);
