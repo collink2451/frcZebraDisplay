@@ -1,1 +1,0 @@
-{"Errors": [{"team_id": "team id frc42069 does not exist"}]}
