@@ -446,12 +446,13 @@ public class zebraDataDisplay {
 
   public static JPanel grabAndDraw(JTextField teamNumTextField1, JTextField teamNumTextField2,
       JTextField teamNumTextField3, String eventKey, JFrame frame, JLayeredPane layeredPane, String drawMode,
-      ArrayList<JCheckBox> arrayList, String colorMode, int dataPS) {
+      ArrayList<JCheckBox> arrayList, String colorMode) {
 
     ArrayList<String> xPosList, yPosList;
     String[] xPos, yPos;
     int teamNum = 0;
     ArrayList<String> matchesArrayList = new ArrayList<String>();
+
     if (!alli) {
       try {
         for (int i = 0; i < arrayList.size(); i++) {
@@ -462,7 +463,8 @@ public class zebraDataDisplay {
       }
     }
 
-    if (teamNumTextField1.getText().equals("Team #") == false) {
+    if (isNumeric(teamNumTextField1.getText())) {
+
       teamNum = Integer.parseInt(teamNumTextField1.getText());
       matches = curlTeamData(teamNum, eventKey);
       if (matchesArrayList.isEmpty()) {
@@ -470,7 +472,6 @@ public class zebraDataDisplay {
       } else {
         matches = matchesArrayList.toArray(new String[0]);
       }
-
       String[] data = getMatches(matches);
       xPosList = position(data, teamNum, "x");
       yPosList = position(data, teamNum, "y");
@@ -487,7 +488,6 @@ public class zebraDataDisplay {
         } else {
           matches = matchesArrayList.toArray(new String[0]);
         }
-
         String[] data = getMatches(matches);
         xPosList.addAll(position(data, teamNum, "x"));
         yPosList.addAll(position(data, teamNum, "y"));
@@ -536,12 +536,7 @@ public class zebraDataDisplay {
     colorMode = "norm";
     // norm, heatMap, multiColor
 
-    int dataPS = 1;
-    // Draws every int data points
-
     JFrame frame = new JFrame("FRC Zebra Display");
-
-    // frame.setPreferredSize(new Dimension(1900, 1000));
 
     JLayeredPane layeredPane = new JLayeredPane();
     layeredPane.setPreferredSize(new Dimension(1200, 600));
@@ -590,7 +585,7 @@ public class zebraDataDisplay {
     JLabel eventKeyLabel = new JLabel("Event Key");
     JLabel info1 = new JLabel("FRC Zebra Data Display " + version);
     JLabel info2 = new JLabel("Developed for PWNAGE FRC2451");
-    JLabel info3 = new JLabel("© Collin Koldoff 2020");
+    JLabel info3 = new JLabel("\u00a9 Collin Koldoff 2020");
 
     panel.setAlignmentX(Component.LEFT_ALIGNMENT);
     panel.setAlignmentY(Component.TOP_ALIGNMENT);
@@ -614,11 +609,15 @@ public class zebraDataDisplay {
     teamNumTextField.addFocusListener(new FocusListener() {
       @Override
       public void focusGained(java.awt.event.FocusEvent e) {
-        teamNumTextField.setText("");
+        if (teamNumTextField.getText().equals("Team #")) {
+          teamNumTextField.setText("");
+        }
       }
-
       @Override
       public void focusLost(java.awt.event.FocusEvent e) {
+        if (!isNumeric(teamNumTextField.getText())) {
+          teamNumTextField.setText("Team #");
+        }
       }
     });
     JTextField teamNumTextField2 = new JTextField(6);
@@ -961,7 +960,7 @@ public class zebraDataDisplay {
     });
 
     graphicsPanel = grabAndDraw(teamNumTextField, teamNumTextField2, teamNumTextField3, eventKey, frame, layeredPane,
-        "null", null, "norm", 0);
+        "null", null, "norm");
 
     draw.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
@@ -970,7 +969,7 @@ public class zebraDataDisplay {
           try {
             eventKey = competitionIDField.getText();
             graphicsPanel = grabAndDraw(teamNumTextField, teamNumTextField2, teamNumTextField3, eventKey, frame,
-                layeredPane, drawMode, checkBoxesSelected, colorMode, dataPS);
+                layeredPane, drawMode, checkBoxesSelected, colorMode);
           } catch (Exception ex) {
             System.err.println(ex);
           }
@@ -1061,7 +1060,7 @@ class DrawPosition extends JPanel {
   private JPanel checkBoxesPanel;
   private boolean auto;
   private boolean alli;
-  private int maxData = 1600;
+  private int maxData = 2147483647;
 
   public DrawPosition(String[] xPos, String[] yPos, JFrame frame, String mode, String colorMode, String[] matches,
       JPanel checkBoxesPanel, boolean auto, boolean alli) {
@@ -1109,6 +1108,7 @@ class DrawPosition extends JPanel {
     int j = 0;
     int colorIndex = -1;
     int index = 0;
+    int dataPS = 1;
     Component[] components = checkBoxesPanel.getComponents();
     for (int k = 0; k < components.length; k++) {
       JCheckBox checkbox = (JCheckBox) components[k];
@@ -1126,6 +1126,9 @@ class DrawPosition extends JPanel {
     int imageCenterY = 350;
     int transparency;
     int diameter = 1;
+    if (alli) {
+      dataPS = 2;
+    }
     for (int i = 0; i < xPos.length; i++) {
       if (isNumericDouble(xPos[i]) == false) {
         index = 0;
@@ -1143,130 +1146,132 @@ class DrawPosition extends JPanel {
         }
       } else {
         index++;
-        if (index <= maxData) {
-          if (colorMode.equals("multiColor")) {
-            g.setColor(new Color(colorR[colorIndex], colorG[colorIndex], colorB[colorIndex]));
-            try {
-              for (int k = 0; k < components.length; k++) {
-                if (matches[colorIndex].equals(components[k].getName())) {
-                  JCheckBox checkbox = (JCheckBox) components[k];
-                  checkbox
-                      .setBackground(new Color(colorR[colorIndex + 1], colorG[colorIndex + 1], colorB[colorIndex + 1]));
-                  if (fgColor[colorIndex].equals("WHITE")) {
-                    checkbox.setForeground(Color.WHITE);
-                  } else {
-                    checkbox.setForeground(Color.BLACK);
+        if ((index % dataPS) == 0) {
+          if (index <= maxData) {
+            if (colorMode.equals("multiColor")) {
+              g.setColor(new Color(colorR[colorIndex], colorG[colorIndex], colorB[colorIndex]));
+              try {
+                for (int k = 0; k < components.length; k++) {
+                  if (matches[colorIndex].equals(components[k].getName())) {
+                    JCheckBox checkbox = (JCheckBox) components[k];
+                    checkbox.setBackground(
+                        new Color(colorR[colorIndex + 1], colorG[colorIndex + 1], colorB[colorIndex + 1]));
+                    if (fgColor[colorIndex].equals("WHITE")) {
+                      checkbox.setForeground(Color.WHITE);
+                    } else {
+                      checkbox.setForeground(Color.BLACK);
+                    }
                   }
                 }
-              }
-            } catch (ArrayIndexOutOfBoundsException ex) {
-              System.err.println(ex);
-            }
-            diameter = 5;
-          } else if (colorMode.equals("norm")) {
-            if (alli) {
-              diameter = 6;
-            } else {
-              diameter = 8;
-            }
-            if (alliance == 1) {
-              g.setColor(new Color(0, 0, 255));
-            } else if (alliance == 2) {
-              g.setColor(new Color(255, 0, 0));
-            }
-          } else if (colorMode.equals("heatMap")) {
-            if (alli) {
-              transparency = 2;
-            } else {
-              transparency = 4;
-            }
-            g.setColor(new Color(255, 0, 0, transparency));
-            diameter = 25;
-          }
-          if (mode.equals("norm")) {
-            try {
-              int xCenter = (int) Math.round((Double.parseDouble(xPos[i])) * scale);
-              int yCenter = 600 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
-              int x = xCenter - (diameter / 2);
-              int y = yCenter - (diameter / 2);
-              g.fillOval(x, y, diameter, diameter);
-            } catch (NumberFormatException ex) {
-              System.err.println(ex);
-            }
-          } else if (mode.equals("allRed")) {
-            if (alliance == 1) {
-              try {
-                int xCenter = (-(((int) Math.round((Double.parseDouble(xPos[i])) * scale)) - imageCenterX)
-                    + imageCenterX) - 201;
-                int yCenter = (-((698 - (int) Math.round((Double.parseDouble(yPos[i])) * scale)) - imageCenterY)
-                    + imageCenterY);
-                int x = xCenter - (diameter / 2);
-                int y = yCenter - (diameter / 2);
-                g.fillOval(x, y, diameter, diameter);
-              } catch (NumberFormatException ex) {
+              } catch (ArrayIndexOutOfBoundsException ex) {
                 System.err.println(ex);
               }
-            } else if (alliance == 2) {
+              diameter = 5;
+            } else if (colorMode.equals("norm")) {
+              if (alli) {
+                diameter = 6;
+              } else {
+                diameter = 6;
+              }
+              if (alliance == 1) {
+                g.setColor(new Color(0, 0, 255));
+              } else if (alliance == 2) {
+                g.setColor(new Color(255, 0, 0));
+              }
+            } else if (colorMode.equals("heatMap")) {
+              if (alli) {
+                transparency = 2;
+              } else {
+                transparency = 4;
+              }
+              g.setColor(new Color(255, 0, 0, transparency));
+              diameter = 25;
+            }
+            if (mode.equals("norm")) {
               try {
                 int xCenter = (int) Math.round((Double.parseDouble(xPos[i])) * scale);
-                int yCenter = 700 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
+                int yCenter = 600 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
                 int x = xCenter - (diameter / 2);
                 int y = yCenter - (diameter / 2);
                 g.fillOval(x, y, diameter, diameter);
               } catch (NumberFormatException ex) {
                 System.err.println(ex);
               }
+            } else if (mode.equals("allRed")) {
+              if (alliance == 1) {
+                try {
+                  int xCenter = (-(((int) Math.round((Double.parseDouble(xPos[i])) * scale)) - imageCenterX)
+                      + imageCenterX) - 201;
+                  int yCenter = (-((698 - (int) Math.round((Double.parseDouble(yPos[i])) * scale)) - imageCenterY)
+                      + imageCenterY);
+                  int x = xCenter - (diameter / 2);
+                  int y = yCenter - (diameter / 2);
+                  g.fillOval(x, y, diameter, diameter);
+                } catch (NumberFormatException ex) {
+                  System.err.println(ex);
+                }
+              } else if (alliance == 2) {
+                try {
+                  int xCenter = (int) Math.round((Double.parseDouble(xPos[i])) * scale);
+                  int yCenter = 700 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
+                  int x = xCenter - (diameter / 2);
+                  int y = yCenter - (diameter / 2);
+                  g.fillOval(x, y, diameter, diameter);
+                } catch (NumberFormatException ex) {
+                  System.err.println(ex);
+                }
+              }
+            } else if (mode.equals("allBlue")) {
+              if (alliance == 1) {
+                try {
+                  int xCenter = (int) Math.round((Double.parseDouble(xPos[i])) * scale);
+                  int yCenter = 700 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
+                  int x = xCenter - (diameter / 2);
+                  int y = yCenter - (diameter / 2);
+                  g.fillOval(x, y, diameter, diameter);
+                } catch (NumberFormatException ex) {
+                  System.err.println(ex);
+                }
+              } else if (alliance == 2) {
+                try {
+                  int xCenter = (-(((int) Math.round((Double.parseDouble(xPos[i])) * scale)) - imageCenterX)
+                      + imageCenterX) - 201;
+                  int yCenter = (-((698 - (int) Math.round((Double.parseDouble(yPos[i])) * scale)) - imageCenterY)
+                      + imageCenterY);
+                  int x = xCenter - (diameter / 2);
+                  int y = yCenter - (diameter / 2);
+                  g.fillOval(x, y, diameter, diameter);
+                } catch (NumberFormatException ex) {
+                  System.err.println(ex);
+                }
+              }
+            } else if (mode.equals("blueMatches")) {
+              if (alliance == 1) {
+                try {
+                  int xCenter = (int) Math.round((Double.parseDouble(xPos[i])) * scale);
+                  int yCenter = 700 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
+                  int x = xCenter - (diameter / 2);
+                  int y = yCenter - (diameter / 2);
+                  g.fillOval(x, y, diameter, diameter);
+                } catch (NumberFormatException ex) {
+                  System.err.println(ex);
+                }
+              }
+            } else if (mode.equals("redMatches")) {
+              if (alliance == 2) {
+                try {
+                  int xCenter = (int) Math.round((Double.parseDouble(xPos[i])) * scale);
+                  int yCenter = 700 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
+                  int x = xCenter - (diameter / 2);
+                  int y = yCenter - (diameter / 2);
+                  g.fillOval(x, y, diameter, diameter);
+                } catch (NumberFormatException ex) {
+                  System.err.println(ex);
+                }
+              }
+            } else if (mode.equals("null")) {
+              return;
             }
-          } else if (mode.equals("allBlue")) {
-            if (alliance == 1) {
-              try {
-                int xCenter = (int) Math.round((Double.parseDouble(xPos[i])) * scale);
-                int yCenter = 700 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
-                int x = xCenter - (diameter / 2);
-                int y = yCenter - (diameter / 2);
-                g.fillOval(x, y, diameter, diameter);
-              } catch (NumberFormatException ex) {
-                System.err.println(ex);
-              }
-            } else if (alliance == 2) {
-              try {
-                int xCenter = (-(((int) Math.round((Double.parseDouble(xPos[i])) * scale)) - imageCenterX)
-                    + imageCenterX) - 201;
-                int yCenter = (-((698 - (int) Math.round((Double.parseDouble(yPos[i])) * scale)) - imageCenterY)
-                    + imageCenterY);
-                int x = xCenter - (diameter / 2);
-                int y = yCenter - (diameter / 2);
-                g.fillOval(x, y, diameter, diameter);
-              } catch (NumberFormatException ex) {
-                System.err.println(ex);
-              }
-            }
-          } else if (mode.equals("blueMatches")) {
-            if (alliance == 1) {
-              try {
-                int xCenter = (int) Math.round((Double.parseDouble(xPos[i])) * scale);
-                int yCenter = 700 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
-                int x = xCenter - (diameter / 2);
-                int y = yCenter - (diameter / 2);
-                g.fillOval(x, y, diameter, diameter);
-              } catch (NumberFormatException ex) {
-                System.err.println(ex);
-              }
-            }
-          } else if (mode.equals("redMatches")) {
-            if (alliance == 2) {
-              try {
-                int xCenter = (int) Math.round((Double.parseDouble(xPos[i])) * scale);
-                int yCenter = 700 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
-                int x = xCenter - (diameter / 2);
-                int y = yCenter - (diameter / 2);
-                g.fillOval(x, y, diameter, diameter);
-              } catch (NumberFormatException ex) {
-                System.err.println(ex);
-              }
-            }
-          } else if (mode.equals("null")) {
-            return;
           }
         }
       }
