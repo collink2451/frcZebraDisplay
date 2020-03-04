@@ -12,7 +12,7 @@ import java.awt.event.FocusListener;
 import java.awt.image.BufferedImage;
 
 public class zebraDataDisplay {
-  private static String version = "V1.0.0";
+  private static String version = "V1.0.1";
   private static String[] matches = null;
   private static JPanel graphicsPanel = new JPanel();
   private static JPanel checkBoxPanel;
@@ -479,7 +479,7 @@ public class zebraDataDisplay {
       yPosList = null;
     }
     if (alli) {
-      if (teamNumTextField2.getText().equals("Team #2") == false) {
+      if (isNumeric(teamNumTextField2.getText())) {
         teamNum = Integer.parseInt(teamNumTextField2.getText());
         matches = curlTeamData(teamNum, eventKey);
         if (matchesArrayList.isEmpty()) {
@@ -492,7 +492,7 @@ public class zebraDataDisplay {
         xPosList.addAll(position(data, teamNum, "x"));
         yPosList.addAll(position(data, teamNum, "y"));
       }
-      if (teamNumTextField3.getText().equals("Team #3") == false) {
+      if (isNumeric(teamNumTextField3.getText())) {
         teamNum = Integer.parseInt(teamNumTextField3.getText());
         matches = curlTeamData(teamNum, eventKey);
         if (matchesArrayList.isEmpty()) {
@@ -516,7 +516,7 @@ public class zebraDataDisplay {
     }
 
     JPanel graphicsPanel = new JPanel();
-    graphicsPanel = new DrawPosition(xPos, yPos, frame, drawMode, colorMode, matches, checkBoxPanel, auto);
+    graphicsPanel = new DrawPosition(xPos, yPos, frame, drawMode, colorMode, matches, checkBoxPanel, auto, alli);
     prevDrawMode = drawMode;
     prevColorMode = colorMode;
     graphicsPanel.setSize(1200, 800);
@@ -791,6 +791,11 @@ public class zebraDataDisplay {
         if (modeMC.isSelected()) {
           modeHM.setSelected(false);
           modeNorm.setSelected(false);
+          modeAlli.setSelected(false);
+          alli = false;
+          teamInputPanel.remove(teamNumTextField2);
+          teamInputPanel.remove(teamNumTextField3);
+          frame.pack();
           colorMode = "multiColor";
         } else {
           modeMC.setSelected(true);
@@ -811,6 +816,11 @@ public class zebraDataDisplay {
       public void actionPerformed(ActionEvent e) {
         if (modeAlli.isSelected()) {
           alli = true;
+          if (modeMC.isSelected()) {
+            modeMC.setSelected(false);
+            modeNorm.setSelected(true);
+            colorMode = "norm";
+          }
           teamInputPanel.add(teamNumTextField2);
           teamInputPanel.add(teamNumTextField3);
           checkBoxes.remove(checkBoxPanel);
@@ -819,6 +829,8 @@ public class zebraDataDisplay {
         } else {
           modeAlli.setSelected(false);
           alli = false;
+          modeNorm.setSelected(true);
+          colorMode = "norm";
           teamInputPanel.remove(teamNumTextField2);
           teamInputPanel.remove(teamNumTextField3);
           frame.pack();
@@ -1048,10 +1060,11 @@ class DrawPosition extends JPanel {
   private String mode, colorMode;
   private JPanel checkBoxesPanel;
   private boolean auto;
+  private boolean alli;
   private int maxData = 1600;
 
   public DrawPosition(String[] xPos, String[] yPos, JFrame frame, String mode, String colorMode, String[] matches,
-      JPanel checkBoxesPanel, boolean auto) {
+      JPanel checkBoxesPanel, boolean auto, boolean alli) {
     this.xPos = xPos;
     this.yPos = yPos;
     this.mode = mode;
@@ -1059,6 +1072,7 @@ class DrawPosition extends JPanel {
     this.matches = matches;
     this.checkBoxesPanel = checkBoxesPanel;
     this.auto = auto;
+    this.alli = alli;
     this.removeAll();
   }
 
@@ -1110,7 +1124,7 @@ class DrawPosition extends JPanel {
 
     int imageCenterX = 700;
     int imageCenterY = 350;
-    int transparency = 4;
+    int transparency;
     int diameter = 1;
     for (int i = 0; i < xPos.length; i++) {
       if (isNumericDouble(xPos[i]) == false) {
@@ -1150,14 +1164,22 @@ class DrawPosition extends JPanel {
             }
             diameter = 5;
           } else if (colorMode.equals("norm")) {
-            if (alliance == 1) {
-              g.setColor(new Color(0, 0, 255));
-              diameter = 8;
-            } else if (alliance == 2) {
-              g.setColor(new Color(255, 0, 0));
+            if (alli) {
+              diameter = 6;
+            } else {
               diameter = 8;
             }
+            if (alliance == 1) {
+              g.setColor(new Color(0, 0, 255));
+            } else if (alliance == 2) {
+              g.setColor(new Color(255, 0, 0));
+            }
           } else if (colorMode.equals("heatMap")) {
+            if (alli) {
+              transparency = 2;
+            } else {
+              transparency = 4;
+            }
             g.setColor(new Color(255, 0, 0, transparency));
             diameter = 25;
           }
