@@ -12,7 +12,7 @@ import java.awt.event.FocusListener;
 import java.awt.image.BufferedImage;
 
 public class zebraDataDisplay {
-  private static String version = "V1.0.1";
+  private static String version = "V1.0.2 Beta";
   private static String[] matches = null;
   private static JPanel graphicsPanel = new JPanel();
   private static JPanel checkBoxPanel;
@@ -51,6 +51,46 @@ public class zebraDataDisplay {
     }
 
     createFrame();
+  }
+
+  public static void bulkDownload(String eventKey) {
+    String[] teams;
+    ArrayList<String> allMatches = new ArrayList<String>();
+
+    try {
+      String curl = "curl -X GET \"https://www.thebluealliance.com/api/v3/event/" + eventKey
+          + "/teams/keys\" -H \"accept: application/json\" -H \"X-TBA-Auth-Key: cc7emTYzQsRjewnrxcNwWo913bgbPBPR2UgNmgxWWVoFmZFeRKUTKVNkfNgKD7SN\"";
+      Runtime rt = Runtime.getRuntime();
+      Process pr = rt.exec(curl);
+
+      String result = new BufferedReader(new InputStreamReader(pr.getInputStream())).lines()
+          .collect(Collectors.joining("\n"));
+
+      teams = result.toString().split("\\r?\\n"); // Seperates result string into string array
+      for (int i = 1; i < teams.length; i++) {
+        teams[i] = teams[i].replace(" ", "");
+        teams[i] = teams[i].replace("\"", "");
+        teams[i] = teams[i].replace(",", "");
+        teams[i] = teams[i].replace("frc", "");
+
+      }
+    } catch (IOException ex) {
+      System.err.println(ex);
+      teams = null;
+    }
+    for (int i = 1; i < teams.length; i++) {
+      if (teams[i].contains("]")) {
+        break;
+      }
+      String[] matches = curlTeamData(Integer.parseInt(teams[i]), eventKey);
+      allMatches.addAll(Arrays.asList(matches));
+    }
+    String[] matches = allMatches.toArray(new String[0]);
+    for (int i = 0; i < matches.length; i++) {
+      matches[i] = matches[i].replace("]", "");
+    }
+    getMatches(matches);
+
   }
 
   public static ArrayList<String> position(String[] data, int teamNum, String mode) {
@@ -247,15 +287,24 @@ public class zebraDataDisplay {
             System.err.println(ex);
           }
           try {
-            write(filename, data);
+            if (data[0].contains("{")) {
+              write(filename, data);
+              try {
+                data = read(file);
+              } catch (Exception ex) {
+                System.err.println(ex);
+              }
+            }
           } catch (IOException ex) {
             System.err.println(ex);
           }
-        }
-        try {
-          data = read(file);
-        } catch (Exception ex) {
-          System.err.println(ex);
+        } else if (file.exists()) {
+          try {
+            data = read(file);
+          } catch (Exception ex) {
+            System.err.println(ex);
+            data = null;
+          }
         }
         ArrayList<String> list = new ArrayList<>();
         list.addAll(Arrays.asList(data));
@@ -529,7 +578,6 @@ public class zebraDataDisplay {
 
   public static JFrame createFrame() {
     int fieldX = 1164;
-    int fieldY = 579;
     drawMode = "norm";
     // norm, allBlue, allRed, blueMatches, redMatches
 
@@ -570,12 +618,12 @@ public class zebraDataDisplay {
 
     JPanel sideBar = new JPanel();
     sideBar.setLayout(new GridLayout(3, 1));
-    sideBar.setPreferredSize(new Dimension(300, 579));
+    sideBar.setPreferredSize(new Dimension(300, 600));
 
     JPanel container = new JPanel();
     container.setLayout(new FlowLayout(FlowLayout.LEADING));
 
-    panel.setLayout(new GridLayout(7, 1));
+    panel.setLayout(new GridLayout(8, 1));
     GridBagConstraints gbc = new GridBagConstraints();
     gbc.anchor = GridBagConstraints.NORTH;
     gbc.weighty = 2;
@@ -590,7 +638,7 @@ public class zebraDataDisplay {
     panel.setAlignmentX(Component.LEFT_ALIGNMENT);
     panel.setAlignmentY(Component.TOP_ALIGNMENT);
 
-    panel.setSize(new Dimension((int) Math.round(frame.getSize().getWidth() - fieldX), fieldY));
+    panel.setSize(new Dimension((int) Math.round(frame.getSize().getWidth() - fieldX), 700));
     try {
       frame.setIconImage(ImageIO.read(new File("src/icon.png")));
     } catch (IOException ex) {
@@ -604,6 +652,9 @@ public class zebraDataDisplay {
     JButton save = new JButton("Download");
     JButton grabMatches = new JButton("Grab Matches");
 
+    JButton bulkDownload = new JButton("Bulk Download (Large Internet Usage)");
+    JButton bulkDownloadConfirm = new JButton("Are you sure?");
+
     JTextField teamNumTextField = new JTextField(6);
     teamNumTextField.setText("Team #");
     teamNumTextField.addFocusListener(new FocusListener() {
@@ -613,6 +664,7 @@ public class zebraDataDisplay {
           teamNumTextField.setText("");
         }
       }
+
       @Override
       public void focusLost(java.awt.event.FocusEvent e) {
         if (!isNumeric(teamNumTextField.getText())) {
@@ -859,40 +911,84 @@ public class zebraDataDisplay {
                     matchID = matchID.replace("\"", "");
                     matchID = matchID.replace(",", "");
                     final String matchIDf = matchID;
-                    JCheckBox checkBox = new JCheckBox((i) + ". " + matchID);
-                    checkBox.setName(matchID);
-                    checkBoxPanel.add(checkBox);
-                    checkBox.setSelected(true);
-                    checkBoxesSelected.add(checkBox);
-                    try {
-                      checkBoxList.add(checkBox);
-                    } catch (NullPointerException npe) {
-                      System.err.println(npe);
-                    }
-                    frame.pack();
-                    checkBox.addActionListener(new ActionListener() {
-                      public void actionPerformed(ActionEvent e) {
-                        JCheckBox checkBox = (JCheckBox) e.getSource();
-                        if (checkBox.isSelected()) {
-                          try {
-                            System.out.println("Selected " + matchIDf);
-                            checkBoxesSelected.add(checkBox);
-                            addAllCheck.setSelected(false);
-                            removeAllCheck.setSelected(false);
-                          } catch (Exception ex) {
-                            System.err.println(ex);
-                          }
-                        } else {
-                          try {
-                            System.out.println("Deselected " + matchIDf);
-                            checkBoxesSelected.remove(checkBox);
-                            removeAllCheck.setSelected(false);
-                          } catch (Exception ex) {
-                            System.err.println(ex);
+
+                    String filename = "data/" + eventKey + "/" + matchID + ".txt";
+                    File file = new File(filename);
+                    if (file.exists()) {
+                      JCheckBox checkBox = new JCheckBox((i) + ". " + matchID);
+                      checkBox.setName(matchID);
+                      checkBoxPanel.add(checkBox);
+                      checkBox.setSelected(true);
+                      checkBoxesSelected.add(checkBox);
+                      try {
+                        checkBoxList.add(checkBox);
+                      } catch (NullPointerException npe) {
+                        System.err.println(npe);
+                      }
+                      frame.pack();
+                      checkBox.addActionListener(new ActionListener() {
+                        public void actionPerformed(ActionEvent e) {
+                          JCheckBox checkBox = (JCheckBox) e.getSource();
+                          if (checkBox.isSelected()) {
+                            try {
+                              System.out.println("Selected " + matchIDf);
+                              checkBoxesSelected.add(checkBox);
+                              addAllCheck.setSelected(false);
+                              removeAllCheck.setSelected(false);
+                            } catch (Exception ex) {
+                              System.err.println(ex);
+                            }
+                          } else {
+                            try {
+                              System.out.println("Deselected " + matchIDf);
+                              checkBoxesSelected.remove(checkBox);
+                              removeAllCheck.setSelected(false);
+                            } catch (Exception ex) {
+                              System.err.println(ex);
+                            }
                           }
                         }
+                      });
+                    } else {
+                      String[] match = { matchID };
+                      getMatches(match);
+                      if (file.exists()) {
+                        JCheckBox checkBox = new JCheckBox((i) + ". " + matchID);
+                        checkBox.setName(matchID);
+                        checkBoxPanel.add(checkBox);
+                        checkBox.setSelected(true);
+                        checkBoxesSelected.add(checkBox);
+                        try {
+                          checkBoxList.add(checkBox);
+                        } catch (NullPointerException npe) {
+                          System.err.println(npe);
+                        }
+                        frame.pack();
+                        checkBox.addActionListener(new ActionListener() {
+                          public void actionPerformed(ActionEvent e) {
+                            JCheckBox checkBox = (JCheckBox) e.getSource();
+                            if (checkBox.isSelected()) {
+                              try {
+                                System.out.println("Selected " + matchIDf);
+                                checkBoxesSelected.add(checkBox);
+                                addAllCheck.setSelected(false);
+                                removeAllCheck.setSelected(false);
+                              } catch (Exception ex) {
+                                System.err.println(ex);
+                              }
+                            } else {
+                              try {
+                                System.out.println("Deselected " + matchIDf);
+                                checkBoxesSelected.remove(checkBox);
+                                addAllCheck.setSelected(false);
+                              } catch (Exception ex) {
+                                System.err.println(ex);
+                              }
+                            }
+                          }
+                        });
                       }
-                    });
+                    }
                   }
                 }
               } catch (ArrayIndexOutOfBoundsException aiobe) {
@@ -987,6 +1083,26 @@ public class zebraDataDisplay {
       }
     });
 
+    bulkDownload.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        String command = e.getActionCommand();
+        if (command.equals("Bulk Download (Large Internet Usage)")) {
+          panel.remove(bulkDownload);
+          panel.add(bulkDownloadConfirm);
+          frame.pack();
+        }
+      }
+    });
+
+    bulkDownloadConfirm.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        String command = e.getActionCommand();
+        if (command.equals("Are you sure?")) {
+          bulkDownload(eventKey);
+        }
+      }
+    });
+
     ComponentListener componenetListener = new ComponentListener() {
       @Override
       public void componentResized(ComponentEvent event) {
@@ -1027,6 +1143,7 @@ public class zebraDataDisplay {
     panel.add(draw);
     panel.add(save);
     panel.add(grabMatches);
+    panel.add(bulkDownload);
 
     layeredPane.add(graphicsPanel, 0);
     container.add(layeredPane, BorderLayout.WEST);
@@ -1213,7 +1330,7 @@ class DrawPosition extends JPanel {
               } else if (alliance == 2) {
                 try {
                   int xCenter = (int) Math.round((Double.parseDouble(xPos[i])) * scale);
-                  int yCenter = 700 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
+                  int yCenter = 600 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
                   int x = xCenter - (diameter / 2);
                   int y = yCenter - (diameter / 2);
                   g.fillOval(x, y, diameter, diameter);
@@ -1225,7 +1342,7 @@ class DrawPosition extends JPanel {
               if (alliance == 1) {
                 try {
                   int xCenter = (int) Math.round((Double.parseDouble(xPos[i])) * scale);
-                  int yCenter = 700 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
+                  int yCenter = 600 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
                   int x = xCenter - (diameter / 2);
                   int y = yCenter - (diameter / 2);
                   g.fillOval(x, y, diameter, diameter);
@@ -1249,7 +1366,7 @@ class DrawPosition extends JPanel {
               if (alliance == 1) {
                 try {
                   int xCenter = (int) Math.round((Double.parseDouble(xPos[i])) * scale);
-                  int yCenter = 700 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
+                  int yCenter = 600 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
                   int x = xCenter - (diameter / 2);
                   int y = yCenter - (diameter / 2);
                   g.fillOval(x, y, diameter, diameter);
@@ -1261,7 +1378,7 @@ class DrawPosition extends JPanel {
               if (alliance == 2) {
                 try {
                   int xCenter = (int) Math.round((Double.parseDouble(xPos[i])) * scale);
-                  int yCenter = 700 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
+                  int yCenter = 600 - (int) Math.round((Double.parseDouble(yPos[i])) * scale);
                   int x = xCenter - (diameter / 2);
                   int y = yCenter - (diameter / 2);
                   g.fillOval(x, y, diameter, diameter);
