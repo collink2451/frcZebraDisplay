@@ -12,29 +12,30 @@ import java.awt.event.FocusListener;
 import java.awt.image.BufferedImage;
 
 public class zebraDataDisplay {
-  private static String version = "V1.0.2 Beta";
-  private static String[] matches = null;
-  private static JPanel graphicsPanel = new JPanel();
-  private static JPanel checkBoxPanel;
-  private static Properties configFile = new java.util.Properties();
-  private static ArrayList<JCheckBox> checkBoxList = new ArrayList<JCheckBox>();
-  private static ArrayList<JCheckBox> checkBoxesSelected = new ArrayList<JCheckBox>();
-  private static String eventKey = null;
-  private static JCheckBox modeNorm = new JCheckBox("Normal");
-  private static JCheckBox modeHM = new JCheckBox("Heat Map");
-  private static JCheckBox modeMC = new JCheckBox("Multi Color");
-  private static JCheckBox modeAuto = new JCheckBox("Autonomous");
-  private static JCheckBox modeAlli = new JCheckBox("Alliance");
-  private static JCheckBox drawNorm = new JCheckBox("Normal");
-  private static JCheckBox drawAllBlue = new JCheckBox("All on Blue Alliance");
-  private static JCheckBox drawAllRed = new JCheckBox("All on Red Alliance");
-  private static JCheckBox drawBlueOnly = new JCheckBox("Blue Data Only");
-  private static JCheckBox drawRedOnly = new JCheckBox("Red Data Only");
-  private static String drawMode, colorMode;
-  private static String prevDrawMode = null;
-  private static String prevColorMode = null;
-  private static boolean auto = false;
-  private static boolean alli = false;
+  static String version = "V1.0.2";
+  static String[] matches = null;
+  static JPanel graphicsPanel = new JPanel();
+  static JPanel checkBoxPanel;
+  static Properties configFile = new java.util.Properties();
+  static ArrayList<JCheckBox> checkBoxList = new ArrayList<JCheckBox>();
+  static ArrayList<JCheckBox> checkBoxesSelected = new ArrayList<JCheckBox>();
+  static String eventKey = null;
+  static JCheckBox modeNorm = new JCheckBox("Normal");
+  static JCheckBox modeHM = new JCheckBox("Heat Map");
+  static JCheckBox modeMC = new JCheckBox("Multi Color");
+  static JCheckBox modeAuto = new JCheckBox("Autonomous");
+  static JCheckBox modeAlli = new JCheckBox("Alliance");
+  static JCheckBox drawNorm = new JCheckBox("Normal");
+  static JCheckBox drawAllBlue = new JCheckBox("All on Blue Alliance");
+  static JCheckBox drawAllRed = new JCheckBox("All on Red Alliance");
+  static JCheckBox drawBlueOnly = new JCheckBox("Blue Data Only");
+  static JCheckBox drawRedOnly = new JCheckBox("Red Data Only");
+  static String drawMode, colorMode;
+  static String prevDrawMode = null;
+  static String prevColorMode = null;
+  static boolean auto = false;
+  static boolean alli = false;
+  static int teamNumTemp = 0;
 
   public static void main(String[] args) throws InterruptedException {
     System.out.println("Initializing...");
@@ -513,7 +514,6 @@ public class zebraDataDisplay {
     }
 
     if (isNumeric(teamNumTextField1.getText())) {
-
       teamNum = Integer.parseInt(teamNumTextField1.getText());
       matches = curlTeamData(teamNum, eventKey);
       if (matchesArrayList.isEmpty()) {
@@ -647,9 +647,9 @@ public class zebraDataDisplay {
 
     frame.setPreferredSize(new Dimension(1920, 1080));
 
-    JButton draw = new JButton("Draw");
+    JButton draw = new JButton("Draw Image");
     frame.getRootPane().setDefaultButton(draw);
-    JButton save = new JButton("Download");
+    JButton save = new JButton("Download Image");
     JButton grabMatches = new JButton("Grab Matches");
 
     JButton bulkDownload = new JButton("Bulk Download (Large Internet Usage)");
@@ -669,6 +669,12 @@ public class zebraDataDisplay {
       public void focusLost(java.awt.event.FocusEvent e) {
         if (!isNumeric(teamNumTextField.getText())) {
           teamNumTextField.setText("Team #");
+        } else {
+          int teamNumTemp2 = Integer.parseInt(teamNumTextField.getText());
+          if (teamNumTemp2 == teamNumTemp) {
+            checkBoxesSelected.clear();
+          }
+          teamNumTemp = Integer.parseInt(teamNumTextField.getText());
         }
       }
     });
@@ -896,6 +902,7 @@ public class zebraDataDisplay {
           checkBoxOptions.removeAll();
           JCheckBox addAllCheck = new JCheckBox("Select All");
           JCheckBox removeAllCheck = new JCheckBox("Deselect All");
+          checkBoxesSelected.clear();
           if (!teamNumTextField.getText().equals("Team #")) {
             try {
               checkBoxPanel.removeAll();
@@ -1061,7 +1068,7 @@ public class zebraDataDisplay {
     draw.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
         String command = e.getActionCommand();
-        if (command.equals("Draw")) {
+        if (command.equals("Draw Image")) {
           try {
             eventKey = competitionIDField.getText();
             graphicsPanel = grabAndDraw(teamNumTextField, teamNumTextField2, teamNumTextField3, eventKey, frame,
@@ -1076,7 +1083,7 @@ public class zebraDataDisplay {
     save.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
         String command = e.getActionCommand();
-        if (command.equals("Download")) {
+        if (command.equals("Download Image")) {
           saveImage(graphicsPanel, teamNumTextField.getText(), teamNumTextField2.getText(),
               teamNumTextField3.getText());
         }
@@ -1243,6 +1250,7 @@ class DrawPosition extends JPanel {
     int imageCenterY = 350;
     int transparency;
     int diameter = 1;
+    colorIndex = -1;
     if (alli) {
       dataPS = 2;
     }
